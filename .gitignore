@@ -1,0 +1,19 @@
+*.env
+
+#Bytecode e file di cache di Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+#Ambienti virtuali
+venv/
+.venv/
+env/
+
+#Impostazioni locali dell'editor / IDE
+.vscode/
+.idea/
+
+#File spazzatura di sistema
+.DS_Store
+Thumbs.db
