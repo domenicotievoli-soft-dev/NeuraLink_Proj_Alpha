@@ -1,125 +1,202 @@
-from connection import get_connection, init_db
- 
+from database.connection import get_connection
+from werkzeug.security import check_password_hash, generate_password_hash
 
-#READ
-def get_pazienti(search_query=None):
-    """Tabella generale e la barra di ricerca:
-        Restituisce tutti i pazienti oppure mi restituisce i pazienti associati ad un farmaco
+# ==============================================================================
+# AUTENTICAZIONE
+# ==============================================================================
+def verifica_utente(username, password_in_chiaro):
     """
-    connection = get_connection()
-    if not connection:
-        return[]
-    cursor = connection.cursor(dictionary=True)
+    Verifica le credenziali di accesso.
+    Se l'utente è un medico, recupera anche il suo medico_id interno.
+    """
+    conn = get_connection()
+    if not conn:
+        return None
 
-    #Verifico che ci sia un parametro di ricerca ed effettuo una ricerca parziale basata su pattern
-    if search_query:
-        query = "SELECT * FROM pazienti WHERE farmaco LIKE %s"
-        param = f"%{search_query}%"
-        cursor.execute(query, (param,))
-    else:
-        query = "SELECT * FROM pazienti"
-        cursor.execute(query)
+    try:
+        cursor = conn.cursor(dictionary=True)
+        query = """
+            SELECT u.username, u.password_hash, u.ruolo, m.id AS medico_id
+            FROM utenti u
+            LEFT JOIN medici m ON u.username = m.username
+            WHERE u.username = %s
+        """
+        cursor.execute(query, (username,))
+        utente = cursor.fetchone()
 
-    risultati = cursor.fetchall()
-    cursor.close()
-    connection.close()
-    return risultati
+        if utente and check_password_hash(utente["password_hash"], password_in_chiaro):
+            
+            return {
+                "username": utente["username"],
+                "ruolo": utente["ruolo"],
+                "medico_id": utente["medico_id"]
+            }
+        return None
+    except Exception as err:
+        print(f"Errore verifica login: {err}")
+        return None
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# ==============================================================================
+# READ (LETTURA)
+# ==============================================================================
+def get_pazienti_by_medico(medico_id, search_query=None):
+    """Restituisce tutti i pazienti associati a un determinato medico."""
+    conn = get_connection()
+    if not conn:
+        return []
+
+    try:
+        cursor = conn.cursor(dictionary=True)
+        if search_query:
+            query = """
+                SELECT * FROM pazienti 
+                WHERE medico_id = %s AND (id LIKE %s OR farmaco LIKE %s)
+                ORDER BY id ASC
+            """
+            filtro = f"%{search_query}%"
+            cursor.execute(query, (medico_id, filtro, filtro))
+        else:
+            query = "SELECT * FROM pazienti WHERE medico_id = %s ORDER BY id ASC"
+            cursor.execute(query, (medico_id,))
+        return cursor.fetchall()
+    except Exception as err:
+        print(f"Errore get_pazienti_by_medico: {err}")
+        return []
+    finally:
+        cursor.close()
+        conn.close()
+
 
 def get_paziente_by_id(paziente_id):
-    """Scheda clinica dettagliata: restituisce l'anagrafica del paziente e l'elenco cronologico delle visite."""
-    connection = get_connection()
-    if not connection:
-        return None
-    pass
-
-    cursor = connection.cursor(dictionary = True)
-    # Lettura anagrafica
-    cursor.execute("SELECT * FROM pazienti WHERE id = %s", (paziente_id,))
-    paziente = cursor.fetchone()
-
-    # Se il paziente esiste, alleghiamo lo storico visite
-    if paziente:
-        cursor.execute (
-            """
-        SELECT * FROM visite
-        WHERE paziente_id = %s
-        ORDER BY data_visita DESC
-            """,
-            (paziente_id,)
-        )
-        paziente["visite"] = cursor.fetchall()
-    
-    cursor.close()
-    connection.close()
-    return paziente
-#CREATE
-def crea_paziente(paziente_id, eta, diagnosi_anno, farmaco):
-    """Registra un nuovo paziente"""
-    connection = get_connection()
-    if not connection:
-        return False
+    """Recupera la scheda anagrafica del paziente e tutto lo storico delle sue visite."""
+    conn = get_connection()
+    if not conn:
+        return None, []
 
     try:
-        cursor = connection.cursor()
-        query = """
-                INSERT INTO pazienti (id, eta, diagnosi_anno, farmaco)
-                VALUES (%s, %s, %s, %s)
-                """
-        cursor.execute (query, (paziente_id, eta, diagnosi_anno, farmaco))
-        connection.commit()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Anagrafica
+        query_paziente = "SELECT * FROM pazienti WHERE id = %s"
+        cursor.execute(query_paziente, (paziente_id,))
+        paziente = cursor.fetchone()
+
+        if not paziente:
+            return None, []
+
+        # Storico Visite cronologico
+        query_visite = """
+            SELECT id, data_visita, edss, volume_lesioni, note 
+            FROM visite 
+            WHERE paziente_id = %s 
+            ORDER BY data_visita DESC
+        """
+        cursor.execute(query_visite, (paziente_id,))
+        visite = cursor.fetchall()
+
+        return paziente, visite
+    except Exception as err:
+        print(f"Errore get_paziente_by_id: {err}")
+        return None, []
+    finally:
         cursor.close()
+        conn.close()
+
+
+# ==============================================================================
+# CREATE (INSERIMENTO)
+# ==============================================================================
+def crea_paziente(paziente_id, password_in_chiaro, medico_id, eta, diagnosi_anno, farmaco):
+    """
+    Inserisce l'account in 'utenti' (ruolo paziente) e la scheda in 'pazienti'.
+    """
+    conn = get_connection()
+    if not conn:
+        return False
+
+    pw_hash = generate_password_hash(password_in_chiaro)
+
+    try:
+        cursor = conn.cursor()
+        
+        # 1. Account utente per il login
+        cursor.execute(
+            "INSERT INTO utenti (username, password_hash, ruolo) VALUES (%s, %s, 'paziente')",
+            (paziente_id, pw_hash)
+        )
+
+        # 2. Scheda clinica paziente
+        cursor.execute(
+            """INSERT INTO pazienti (id, medico_id, eta, diagnosi_anno, farmaco)
+               VALUES (%s, %s, %s, %s, %s)""",
+            (paziente_id, medico_id, eta, diagnosi_anno, farmaco)
+        )
+
+        conn.commit()
         return True
-    except Exception as e:
-        connection.rollback()
-        print(f"Errore durante l'inserimento del paziente: {e}")
+    except Exception as err:
+        print(f"Errore crea_paziente: {err}")
+        conn.rollback()
         return False
     finally:
-        connection.close()
+        cursor.close()
+        conn.close()
+
 
 def crea_report_visita(paziente_id, data_visita, edss, volume_lesioni, note):
-    """Registra il report di una visita effettuata"""
-    connection = get_connection()
-    if not connection:
+    """Aggiunge una visita clinica per un dato paziente."""
+    conn = get_connection()
+    if not conn:
         return False
 
     try:
-        cursor = connection.cursor()
+        cursor = conn.cursor()
         query = """
             INSERT INTO visite (paziente_id, data_visita, edss, volume_lesioni, note)
             VALUES (%s, %s, %s, %s, %s)
         """
-        cursor.execute(
-            query, (paziente_id, data_visita, edss, volume_lesioni, note)
-        )
-        connection.commit()
-        cursor.close()
+        cursor.execute(query, (paziente_id, data_visita, edss, volume_lesioni, note))
+        conn.commit()
         return True
-    except Exception as e:
-        connection.rollback()
-        print(f"Errore durante l'inserimento della visita: {e}")
+    except Exception as err:
+        print(f"Errore crea_report_visita: {err}")
+        conn.rollback()
         return False
     finally:
-        connection.close()
+        cursor.close()
+        conn.close()
 
 
+# ==============================================================================
+# DELETE (CANCELLAZIONE)
+# ==============================================================================
 def elimina_paziente(paziente_id):
-    """Elimina un paziente"""
-    connection = get_connection()
-    if not connection:
-        return None
+    """
+    Cancella il paziente partendo dalla tabella 'utenti'.
+    Grazie al vincolo ON DELETE CASCADE, MySQL rimuove automaticamente:
+    - La riga in 'pazienti'
+    - Tutte le righe correlate in 'visite'
+    """
+    conn = get_connection()
+    if not conn:
+        return False
+
     try:
-        cursor = connection.cursor()
-        query = "DELETE FROM pazienti WHERE id=%s"
-        cursor.execute(query, (paziente_id,))
-        connection.commit()
-        cursor.close()
-        return True
-    except Exception as e:
-        connection.rollback()
-        print(f"Errore durante l'eliminazione: {e}")
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM utenti WHERE username = %s AND ruolo = 'paziente'", (paziente_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as err:
+        print(f"Errore elimina_paziente: {err}")
+        conn.rollback()
         return False
     finally:
-        connection.close()
+        cursor.close()
+        conn.close()
 
 def pulisci_dati_test(prefisso="TEST-%"):
     """Elimina tutti i pazienti di test (e per CASCADE le loro visite)
@@ -132,7 +209,7 @@ def pulisci_dati_test(prefisso="TEST-%"):
 
     try:
         cursor = conn.cursor()
-        query = "DELETE FROM pazienti WHERE id LIKE %s"
+        query = "DELETE FROM utenti WHERE username LIKE %s AND ruolo = 'paziente'"
         cursor.execute(query, (prefisso,))
         righe_eliminate = cursor.rowcount
         conn.commit()
