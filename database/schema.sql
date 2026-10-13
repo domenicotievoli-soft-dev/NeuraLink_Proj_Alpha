@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS medici (
     FOREIGN KEY (username) REFERENCES utenti(username) ON DELETE CASCADE
 );
 
--- 3. Tabella Pazienti (mantiene il tuo ID PT-xxx, legato al login e al medico curante)
+-- 3. Tabella Pazienti
 CREATE TABLE IF NOT EXISTS pazienti (
     id VARCHAR(20) PRIMARY KEY,
     medico_id INT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS pazienti (
     FOREIGN KEY (medico_id) REFERENCES medici(id) ON DELETE SET NULL
 );
 
--- 4. Tabella Visite (invariata rispetto al tuo schema originale)
+-- 4. Tabella Visite
 CREATE TABLE IF NOT EXISTS visite (
     id INT AUTO_INCREMENT PRIMARY KEY,
     paziente_id VARCHAR(20) NOT NULL,

@@ -1,0 +1,95 @@
+
+{% extends 'base.html' %}
+
+{% block title %}Dettaglio Paziente {{ paziente.id }} - NeuraLink{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{{ url_for('dashboard_medico') }}" class="btn btn-outline-secondary btn-sm mb-3">
+        <i class="bi bi-arrow-left me-1"></i>Torna alla Dashboard
+    </a>
+    <div class="d-flex justify-content-between align-items-center">
+        <h2 class="fw-bold mb-0">Scheda Clinica: <span class="text-primary font-monospace">{{ paziente.id }}</span></h2>
+        <span class="badge bg-primary fs-6">Paziente Attivo</span>
+    </div>
+</div>
+
+<!-- Scheda Dati Generali e Terapia -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white fw-bold">
+                <i class="bi bi-person-vcard me-2 text-primary"></i>Informazioni Anagrafiche
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">Codice Paziente:</span>
+                        <strong class="font-monospace">{{ paziente.id }}</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">Età:</span>
+                        <strong>{{ paziente.eta }} anni</strong>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span class="text-muted">Anno Diagnosi SM:</span>
+                        <strong>{{ paziente.diagnosi_anno }}</strong>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white fw-bold">
+                <i class="bi bi-capsule me-2 text-success"></i>Terapia Farmacologica Attuale
+            </div>
+            <div class="card-body d-flex flex-column justify-content-center">
+                <p class="text-muted small mb-1">Farmaco attualmente in prescrizione:</p>
+                <h3 class="fw-bold text-success mb-0">{{ paziente.farmaco }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Storico Visite Cliniche -->
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-journal-medical me-2 text-info"></i>Storico Controlli e Lesioni</span>
+        <span class="badge bg-secondary">{{ visite|length }} visite registrate</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" class="ps-4">Data Visita</th>
+                        <th scope="col">Punteggio EDSS</th>
+                        <th scope="col">Volume Lesioni (mm³)</th>
+                        <th scope="col" class="pe-4">Note Cliniche</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for visita in visite %}
+                    <tr>
+                        <td class="ps-4 fw-bold">{{ visita.data_visita }}</td>
+                        <td><span class="badge bg-warning text-dark">EDSS {{ visita.edss }}</span></td>
+                        <td>{{ visita.volume_lesioni }} mm³</td>
+                        <td class="pe-4 text-muted small">{{ visita.note or 'Nessuna nota aggiuntiva' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-muted">
+                            <i class="bi bi-clipboard-x fs-3 d-block mb-2"></i>
+                            Nessuna visita registrata per questo paziente.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

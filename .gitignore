@@ -17,3 +17,6 @@ env/
 #File spazzatura di sistema
 .DS_Store
 Thumbs.db
+
+#File appunti Proj
+*.docx

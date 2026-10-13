@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}Nuovo Paziente - MS-Track{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow border-0">
+            <div class="card-header bg-primary text-white p-3">
+                <h4 class="card-title mb-0 fw-bold">
+                    <i class="bi bi-person-plus me-2"></i>Registrazione Nuovo Paziente
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                <form action="{{ url_for('nuovo_paziente') }}" method="POST">
+                    
+                    <div class="mb-3">
+                        <label for="paziente_id" class="form-label font-monospace fw-bold">Codice Identificativo Paziente</label>
+                        <input type="text" class="form-control" id="paziente_id" name="paziente_id" 
+                               required placeholder="es. PT-105" autofocus>
+                        <div class="form-text">Il codice servirà anche al paziente per effettuare l'accesso al sistema.</div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label for="eta" class="form-label fw-bold">Età</label>
+                            <input type="number" class="form-control" id="eta" name="eta" 
+                                   min="1" max="120" required placeholder="es. 42">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="diagnosi_anno" class="form-label fw-bold">Anno Diagnosi</label>
+                            <input type="number" class="form-control" id="diagnosi_anno" name="diagnosi_anno" 
+                                   min="1950" max="2026" required placeholder="es. 2018">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="farmaco" class="form-label fw-bold">Farmaco Assegnato</label>
+                        <input type="text" class="form-control" id="farmaco" name="farmaco" 
+                               required placeholder="es. Interferone, Ocrelizumab...">
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="password" class="form-label fw-bold">Password Account Paziente</label>
+                        <input type="password" class="form-control" id="password" name="password" 
+                               required placeholder="••••••••">
+                        <div class="form-text">Imposta la password iniziale con cui il paziente potrà consultare il proprio storico.</div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-2">
+                        <a href="{{ url_for('dashboard_medico') }}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>Annulla
+                        </a>
+                        <button type="submit" class="btn btn-success fw-bold px-4">
+                            <i class="bi bi-check-lg me-1"></i>Salva Paziente
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
