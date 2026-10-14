@@ -39,10 +39,12 @@
                 <h6 class="text-muted text-uppercase small fw-bold">Terapia Assegnata</h6>
                 {% if visite %}
                     <!-- Prende il farmaco dell'ultima visita nell'elenco -->
-                    <h4 class="fw-bold text-success mb-0">{{ visite[-1].farmaco }}</h3>
+                    <h3 class="fw-bold text-success mb-0">{{ visite[-1].farmaco }}</h3>
+                {% elif paziente.farmaco %}
+                    <!-- Se non ci sono visite, ma il paziente ha un farmaco assegnato in anagrafica -->
+                    <h3 class="fw-bold text-success mb-0">{{ paziente.farmaco }}</h3>
                 {% else %}
                     <h5 class="text-muted mb-0">Nessuna terapia registrata</h5>
-                {% endif %}
             </div>
         </div>
     </div>
