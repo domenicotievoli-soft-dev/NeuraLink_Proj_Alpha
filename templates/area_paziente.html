@@ -63,7 +63,16 @@
                     {% for visita in visite %}
                     <tr>
                         <td class="ps-4 fw-bold">{{ visita.data_visita }}</td>
-                        <td><span class="badge bg-info text-dark">EDSS {{ visita.edss }}</span></td>
+                        <td>
+                            <!-- Assegnazione dinamica del colore del badge in base al valore EDSS -->
+                            {% if visita.edss < 4.0 %}
+                                <span class="badge bg-warning text-dark">EDSS {{ visita.edss }}</span>
+                            {% elif visita.edss < 7.0 %}
+                                <span class="badge bg-warning text-dark border border-warning" style="background-color: #fd7e14 !important; color: white !important;">EDSS {{ visita.edss }}</span>
+                            {% else %}
+                                <span class="badge bg-danger text-dark">EDSS {{ visita.edss }}</span>
+                            {% endif %}
+                        </td>
                         <td>{{ visita.volume_lesioni }} mm³</td>
                         <td class="pe-4 text-muted small">{{ visita.note or 'Nessuna nota registrata' }}</td>
                     </tr>

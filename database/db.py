@@ -93,7 +93,7 @@ def get_paziente_by_id(paziente_id):
             SELECT id, data_visita, edss, volume_lesioni, note 
             FROM visite 
             WHERE paziente_id = %s 
-            ORDER BY data_visita DESC
+            ORDER BY data_visita ASC
         """
         cursor.execute(query_visite, (paziente_id,))
         visite = cursor.fetchall()
@@ -197,6 +197,27 @@ def elimina_paziente(paziente_id):
     finally:
         cursor.close()
         conn.close()
+
+def elimina_visita_db(visita_id):
+    """
+    Rimuove una singola visita dal database utilizzando il suo ID unico.
+    Restituisce True se l'eliminazione ha avuto successo, False altrimenti.
+    """
+    connection = get_connection() 
+    try:
+        cursor = connection.cursor()
+        sql = "DELETE FROM visite WHERE id = %s"
+        cursor.execute(sql, (visita_id,))
+        connection.commit()
+        
+        # Verifichiamo che almeno una riga sia stata effettivamente cancellata
+        return cursor.rowcount > 0
+    except Exception as e:
+        print(f"Errore durante l'eliminazione della visita {visita_id}: {e}")
+        connection.rollback()
+        return False
+    finally:
+        connection.close()
 
 def pulisci_dati_test(prefisso="TEST-%"):
     """Elimina tutti i pazienti di test (e per CASCADE le loro visite)

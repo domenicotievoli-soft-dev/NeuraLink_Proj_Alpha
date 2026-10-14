@@ -19,7 +19,7 @@ Per valutare la progressione della patologia e l'efficacia delle terapie farmaco
    * **Range**: Va da **0.0** (esame neurologico perfettamente normale) a **10.0** (morte dovuta alla malattia), con incrementi di 0.5 punti.
    * **Significato**: Valori inferiori a 4.0 indicano una disabilità lieve che non compromette la deambulazione, mentre punteggi superiori a 4.0 evidenziano una progressiva limitazione dell'autonomia e della mobilità.
 
-2. **Volume delle Lesioni ($mm^3$)**:
+2. **Volume delle Lesioni (mm^3)**:
    * **Cos'è**: Il carico lesionale volumetrico cumulativo misurato tramite Risonanza Magnetica Encefalica/Midollare (MRI).
    * **Significato**: Un aumento del volume lesionale nel tempo indica la comparsa di nuove placche o l'espansione di quelle preesistenti, costituendo un biomarker diretto dell'attività infiammatoria e neurodegenerativa della patologia.
 

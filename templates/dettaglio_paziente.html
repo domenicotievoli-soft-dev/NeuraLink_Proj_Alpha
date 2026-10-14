@@ -54,42 +54,120 @@
 </div>
 
 <!-- Storico Visite Cliniche -->
-<div class="card shadow-sm border-0 mb-4">
-    <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-journal-medical me-2 text-info"></i>Storico Controlli e Lesioni</span>
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-list-task me-2 text-primary"></i>Storico Controlli e Lesioni</span>
         <span class="badge bg-secondary">{{ visite|length }} visite registrate</span>
     </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th scope="col" class="ps-4">Data Visita</th>
-                        <th scope="col">Punteggio EDSS</th>
-                        <th scope="col">Volume Lesioni (mm³)</th>
-                        <th scope="col" class="pe-4">Note Cliniche</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for visita in visite %}
-                    <tr>
-                        <td class="ps-4 fw-bold">{{ visita.data_visita }}</td>
-                        <td><span class="badge bg-warning text-dark">EDSS {{ visita.edss }}</span></td>
-                        <td>{{ visita.volume_lesioni }} mm³</td>
-                        <td class="pe-4 text-muted small">{{ visita.note or 'Nessuna nota aggiuntiva' }}</td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="4" class="text-center py-4 text-muted">
-                            <i class="bi bi-clipboard-x fs-3 d-block mb-2"></i>
-                            Nessuna visita registrata per questo paziente.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col" class="ps-4">Data Visita</th>
+                    <th scope="col">Punteggio EDSS</th>
+                    <th scope="col">Volume Lesioni (mm³)</th>
+                    <th scope="col">Note Cliniche</th>
+                    {% if session.get('ruolo') == 'medico' %}
+                    <th scope="col" class="text-center pe-4">Azioni</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for visita in visite %}
+                <tr>
+                    <td class="ps-4 fw-bold">{{ visita.data_visita }}</td>
+                    <td>
+                        {% if visita.edss < 4.0 %}
+                            <span class="badge bg-warning text-dark">EDSS {{ visita.edss }}</span>
+                        {% elif visita.edss < 7.0 %}
+                            <span class="badge text-black" style="background-color: #fd7e14;">EDSS {{ visita.edss }}</span>
+                        {% else %}
+                            <span class="badge bg-danger text-black">EDSS {{ visita.edss }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ visita.volume_lesioni }} mm³</td>
+                    <td class="text-muted small">{{ visita.note or 'Nessuna nota aggiuntiva' }}</td>
+
+                    <!-- Tasto Cestino VISIBILE SOLO AL MEDICO -->
+                    {% if session.get('ruolo') == 'medico' %}
+                    <td class="text-center pe-4">
+                        <form action="{{ url_for('cancella_visita', visita_id=visita.id) }}" 
+                              method="POST" 
+                              onsubmit="return confirm('Sei sicuro di voler eliminare la visita del {{ visita.data_visita }}?');" 
+                              class="d-inline">
+                            <input type="hidden" name="paziente_id" value="{{ paziente.id }}">
+                            <button type="submit" class="btn btn-outline-danger btn-sm border-0" title="Elimina questa visita">
+                                <i class="bi bi-trash-fill"></i>
+                            </button>
+                        </form>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="{% if session.get('ruolo') == 'medico' %}5{% else %}4{% endif %}" class="text-center py-4 text-muted">
+                        Nessuna visita registrata per questo paziente.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 
+<!-- VISIBILE SOLO SE L'UTENTE È UN MEDICO -->
+{% if session.get('ruolo') == 'medico' %}
+<div class="card shadow-sm border-0 mt-5 mb-5" id="form-visita">
+    <!-- Header che funziona da pulsante toggle -->
+    <div class="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center" 
+         style="cursor: pointer;" 
+         data-bs-toggle="collapse" 
+         data-bs-target="#collapseVisita" 
+         aria-expanded="false" 
+         aria-controls="collapseVisita">
+        <span><i class="bi bi-plus-circle me-2"></i>Registra Nuova Visita Clinica</span>
+        <i class="bi bi-chevron-down ms-auto"></i>
+    </div>
+
+    <!-- Contenuto del form nascosto di default-->
+    <div class="collapse" id="collapseVisita">
+        <div class="card-body p-4">
+            <form action="{{ url_for('nuova_visita', paziente_id=paziente.id) }}" method="POST">
+                <div class="row g-3">
+                    <!-- Data Visita -->
+                    <div class="col-md-4">
+                        <label for="data_visita" class="form-label fw-semibold">Data Visita *</label>
+                        <input type="date" class="form-control" id="data_visita" name="data_visita" required>
+                    </div>
+
+                    <!-- Punteggio EDSS -->
+                    <div class="col-md-4">
+                        <label for="edss" class="form-label fw-semibold">Punteggio EDSS (0.0 - 10.0) *</label>
+                        <input type="number" step="0.5" min="0" max="10" class="form-control" id="edss" name="edss" placeholder="Es. 2.5" required>
+                    </div>
+
+                    <!-- Volume Lesioni -->
+                    <div class="col-md-4">
+                        <label for="volume_lesioni" class="form-label fw-semibold">Volume Lesioni (mm³) *</label>
+                        <input type="number" step="0.1" min="0" class="form-control" id="volume_lesioni" name="volume_lesioni" placeholder="Es. 1250.5" required>
+                    </div>
+
+                    <!-- Note Cliniche -->
+                    <div class="col-12">
+                        <label for="note" class="form-label fw-semibold">Note Cliniche</label>
+                        <textarea class="form-control" id="note" name="note" rows="3" placeholder="Note cliniche facoltative..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Pulsante Salva -->
+                <div class="mt-4 text-end">
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="bi bi-check-lg me-1"></i>Salva Visita
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

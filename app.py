@@ -9,7 +9,8 @@ from database.db import (
     get_paziente_by_id,
     crea_paziente,
     crea_report_visita,
-    elimina_paziente
+    elimina_paziente,
+    elimina_visita_db
 )
 
 load_dotenv()
@@ -146,7 +147,23 @@ def dettaglio_paziente_medico(paziente_id):
         flash("Accesso non consentito.", "danger")
         return redirect(url_for('index'))
 
-    # Se viene inviato il form di una nuova visita clinica
+   
+    # GET: lettura cartella e storico visite
+    paziente, visite = get_paziente_by_id(paziente_id)
+    if not paziente:
+        flash("Paziente non trovato.", "warning")
+        return redirect(url_for('dashboard_medico'))
+
+    return render_template('dettaglio_paziente.html', paziente=paziente, visite=visite)  
+
+@app.route('/medico/paziente/<paziente_id>/visita/nuova', methods=['POST'])
+def nuova_visita(paziente_id):
+    # Verifica di sicurezza lato server
+    if not role_medico():
+        flash("Operazione non autorizzata: solo il personale medico può registrare visite.", "danger")
+        return redirect(url_for('login'))
+
+    #Se viene inviato il form di una nuova visita clinica
     if request.method == 'POST':
         data_visita = request.form.get('data_visita')
         edss = request.form.get('edss')
@@ -169,15 +186,7 @@ def dettaglio_paziente_medico(paziente_id):
                     flash("Errore nel salvataggio della visita.", "danger")
 
         return redirect(url_for('dettaglio_paziente_medico', paziente_id=paziente_id))  
-   
-    # GET: lettura cartella e storico visite
-    paziente, visite = get_paziente_by_id(paziente_id)
-    if not paziente:
-        flash("Paziente non trovato.", "warning")
-        return redirect(url_for('dashboard_medico'))
-
-    return render_template('dettaglio_paziente.html', paziente=paziente, visite=visite)  
-
+    
 @app.route('/medico/paziente/<paziente_id>/elimina', methods=['POST'])
 def cancella_paziente(paziente_id):
     if not role_medico():
@@ -191,6 +200,24 @@ def cancella_paziente(paziente_id):
         flash("Errore durante l'eliminazione del paziente.", "danger")
 
     return redirect(url_for('dashboard_medico'))    
+
+@app.route('/medico/visita/<int:visita_id>/cancella', methods=['POST'])
+def cancella_visita(visita_id):
+    if not role_medico():
+        flash("Operazione riservata al personale medico.", "danger")
+        return redirect(url_for('login'))
+
+    paziente_id = request.form.get('paziente_id')
+
+    # Esegui la cancellazione della visita dal database
+    eliminato = elimina_visita_db(visita_id) # sostituisci con la tua funzione DB
+
+    if eliminato:
+        flash("Visita eliminata correttamente.", "success")
+    else:
+        flash("Errore durante l'eliminazione della visita.", "danger")
+
+    return redirect(url_for('dettaglio_paziente_medico', paziente_id=paziente_id))
 
 # AREA PAZIENTE 
 @app.route('/paziente/dashboard')
@@ -208,6 +235,7 @@ def dashboard_paziente():
     paziente, visite = get_paziente_by_id(paziente_id)
 
     return render_template('area_paziente.html', paziente=paziente, visite=visite)
+
 
 
 #TEST

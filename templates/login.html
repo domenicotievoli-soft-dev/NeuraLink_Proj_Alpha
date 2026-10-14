@@ -8,7 +8,7 @@
         <div class="card shadow border-0 rounded-3">
             <div class="card-body p-4">
                 <div class="text-center mb-4">
-                    <i class="bi bi-hospital text-primary" style="font-size: 3rem;"></i>
+                    <i class="bi bi-clipboard2-pulse text-primary" style="font-size: 3rem;"></i>
                     <h3 class="fw-bold mt-2">Accedi a NeuraLink</h3>
                     <p class="text-muted medium">Inserisci le credenziali di accesso</p>
                 </div>
@@ -26,9 +26,35 @@
                         <label for="password" class="form-label font-monospace fw-bold">Password</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                            
+                            <!-- Campo Input Password -->
                             <input type="password" class="form-control" id="password" name="password" required placeholder="••••••••">
+                            
+                            <!-- Pulsante con l'icona dell'occhio -->
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="bi bi-eye" id="toggleIcon"></i>
+                            </button>
                         </div>
                     </div>
+
+                    <!-- Script per gestire il click sull'occhio -->
+                    <script>
+                        document.getElementById('togglePassword').addEventListener('click', function () {
+                            const passwordInput = document.getElementById('password');
+                            const toggleIcon = document.getElementById('toggleIcon');
+                            
+                            // Se è di tipo password, lo trasformiamo in testo (e viceversa)
+                            if (passwordInput.type === 'password') {
+                                passwordInput.type = 'text';
+                                toggleIcon.classList.remove('bi-eye');
+                                toggleIcon.classList.add('bi-eye-slash'); // Icona occhio sbarrato
+                            } else {
+                                passwordInput.type = 'password';
+                                toggleIcon.classList.remove('bi-eye-slash');
+                                toggleIcon.classList.add('bi-eye'); // Icona occhio normale
+                            }
+                        });
+                    </script>
 
                     <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow-sm">
                         <i class="bi bi-box-arrow-in-right me-1"></i> Accedi

@@ -54,34 +54,107 @@
                 <tbody>
                     {% for paziente in pazienti %}
                     <tr>
-                        <td class="ps-4 font-monospace fw-bold text-primary">{{ paziente.id }}</td>
+                        <!-- 1. Dati Anagrafici (nelle giuste colonne) -->
+                        <td class="ps-4 fw-bold">
+                            <a href="{{ url_for('dettaglio_paziente_medico', paziente_id=paziente.id) }}" class="text-decoration-none">
+                                {{ paziente.id }}
+                            </a>
+                        </td>
                         <td>{{ paziente.eta }} anni</td>
                         <td>{{ paziente.diagnosi_anno }}</td>
                         <td>
                             <span class="badge bg-info text-dark">{{ paziente.farmaco }}</span>
                         </td>
-                        <td class="text-center pe-4">
-                            <!-- Pulsante Dettagli (Icona Info) -->
-                            <a href="{{ url_for('dettaglio_paziente_medico', paziente_id=paziente.id) }}" 
-                               class="btn btn-outline-primary btn-sm me-1" title="Visualizza Dettagli e Visite">
-                                <i class="bi bi-info-circle-fill"></i>
-                            </a>
 
-                            <!-- Form ed Eliminazione (Icona Cestino) -->
-                            <form action="{{ url_for('cancella_paziente', paziente_id=paziente.id) }}" 
-                                  method="POST" 
-                                  class="d-inline"
-                                  onsubmit="return confirm('Sei sicuro di voler eliminare il paziente {{ paziente.id }} e tutto il suo storico visite?');">
-                                <button type="submit" class="btn btn-outline-danger btn-sm" title="Elimina Paziente">
-                                    <i class="bi bi-trash-fill"></i>
-                                </button>
-                            </form>
+                        <!-- 2. Colonna Azioni (solo alla fine del ciclo) -->
+                        <td class="text-center pe-4">
+                            <div class="d-flex justify-content-center align-items-center gap-1">
+                                <!-- Tasto Info -->
+                                <a href="{{ url_for('dettaglio_paziente_medico', paziente_id=paziente.id) }}" 
+                                   class="btn btn-outline-primary btn-sm" title="Visualizza Dettagli">
+                                    <i class="bi bi-info-circle-fill"></i>
+                                </a>
+
+                                <!-- Menu a Tre Puntini -->
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle-split" 
+                                            type="button" 
+                                            data-bs-toggle="dropdown" 
+                                            aria-expanded="false" 
+                                            title="Altre Opzioni">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                                        <li>
+                                            <button type="button" 
+                                                    class="dropdown-item text-primary" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#modalNuovaVisita-{{ paziente.id }}">
+                                                <i class="bi bi-plus-circle me-2"></i>Aggiungi Nuova Visita
+                                            </button>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <form action="{{ url_for('cancella_paziente', paziente_id=paziente.id) }}" 
+                                                  method="POST" 
+                                                  onsubmit="return confirm('Sei sicuro di voler eliminare il paziente {{ paziente.id }}?');">
+                                                <button type="submit" class="dropdown-item text-danger">
+                                                    <i class="bi bi-trash-fill me-2"></i>Elimina Paziente
+                                                </button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                                <!-- FINESTRA MODAL (Inserita direttamente dentro il TD per ogni paziente) -->
+                            <div class="modal fade text-start" id="modalNuovaVisita-{{ paziente.id }}" tabindex="-1" aria-labelledby="modalLabel-{{ paziente.id }}" aria-hidden="true">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content border-0 shadow">
+                                        <div class="modal-header bg-primary text-white">
+                                            <h5 class="modal-title fs-6" id="modalLabel-{{ paziente.id }}">
+                                                <i class="bi bi-plus-circle me-2"></i>Nuova Visita - {{ paziente.id }}
+                                            </h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                                        </div>
+                                        <form action="{{ url_for('nuova_visita', paziente_id=paziente.id) }}" method="POST">
+                                            <div class="modal-body p-4">
+                                                <div class="row g-3">
+                                                    <div class="col-12">
+                                                        <label class="form-label fw-semibold">Data Visita *</label>
+                                                        <input type="date" class="form-control" name="data_visita" required>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-semibold">Punteggio EDSS *</label>
+                                                        <input type="number" step="0.5" min="0" max="10" class="form-control" name="edss" placeholder="Es. 2.5" required>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label class="form-label fw-semibold">Volume Lesioni (mm³) *</label>
+                                                        <input type="number" step="0.1" min="0" class="form-control" name="volume_lesioni" placeholder="Es. 12.5" required>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <label class="form-label fw-semibold">Note Cliniche</label>
+                                                        <textarea class="form-control" name="note" rows="3" placeholder="Note facoltative..."></textarea>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer bg-light">
+                                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Annulla</button>
+                                                <button type="submit" class="btn btn-primary btn-sm">
+                                                    <i class="bi bi-check-lg me-1"></i>Salva Visita
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        <!-- FINE MODAL -->
                         </td>
                     </tr>
                     {% else %}
                     <tr>
                         <td colspan="5" class="text-center py-4 text-muted">
-                            <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                            <i class="bi bi-person-x fs-3 d-block mb-2"></i>
                             Nessun paziente trovato.
                         </td>
                     </tr>
