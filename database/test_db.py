@@ -12,7 +12,8 @@ from database.db import (
     get_paziente_by_id,
     get_pazienti_by_medico,
     verifica_utente,
-    pulisci_dati_test
+    pulisci_dati_test,
+    reset_db
 )
 
 
@@ -26,9 +27,10 @@ def run_tests():
     cartella_corrente = os.path.dirname(os.path.abspath(__file__))
     percorso_schema = os.path.join(cartella_corrente, "schema.sql")
 
-    init_db(schema_file=percorso_schema)
     #Pulizia preventiva
-    pulisci_dati_test()
+    reset_db()
+    init_db(schema_file=percorso_schema)
+    
     
     print("-> Schema inizializzato con successo.")
   except Exception as e:
@@ -93,6 +95,7 @@ def run_tests():
   print("\n6. Aggiunta visita clinica per TEST-999...")
   visita_ok = crea_report_visita(
       paziente_id="TEST-999",
+      farmaco="Interferone",
       data_visita="2026-03-01",
       edss=3.5,
       volume_lesioni=15.80,
@@ -130,7 +133,7 @@ def run_tests():
     return
 
   #Pulizia finale  
-  pulisci_dati_test()  
+  pulisci_dati_test("TEST-%")  
   print("\n=== TUTTI I TEST SONO STATI SUPERATI CON SUCCESSO! ===")
 
 

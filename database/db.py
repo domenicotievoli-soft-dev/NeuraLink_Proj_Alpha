@@ -1,5 +1,19 @@
 from database.connection import get_connection
 from werkzeug.security import check_password_hash, generate_password_hash
+import os
+from dotenv import load_dotenv
+
+CARTELLA_DB = os.path.dirname(os.path.abspath(__file__))
+CARTELLA_HOME = os.path.dirname(CARTELLA_DB)
+PERCORSO_ENV = os.path.join(CARTELLA_HOME, ".env")
+
+load_dotenv(dotenv_path=PERCORSO_ENV)
+
+DEFAULT_HOST = os.getenv("DB_HOST", "127.0.0.1")
+DEFAULT_PORT = int(os.getenv("DB_PORT", 3306))
+DEFAULT_USER = os.getenv("DB_USER", "root")
+DEFAULT_PW = os.getenv("DB_PASSWORD", "")
+DEFAULT_DB = os.getenv("DB_NAME", "ms_track_db")
 
 # ==============================================================================
 # AUTENTICAZIONE
@@ -90,7 +104,7 @@ def get_paziente_by_id(paziente_id):
 
         # Storico Visite cronologico
         query_visite = """
-            SELECT id, data_visita, edss, volume_lesioni, note 
+            SELECT id, data_visita,farmaco, edss, volume_lesioni, note 
             FROM visite 
             WHERE paziente_id = %s 
             ORDER BY data_visita ASC
@@ -147,7 +161,7 @@ def crea_paziente(paziente_id, password_in_chiaro, medico_id, eta, diagnosi_anno
         conn.close()
 
 
-def crea_report_visita(paziente_id, data_visita, edss, volume_lesioni, note):
+def crea_report_visita(paziente_id, data_visita,farmaco, edss, volume_lesioni, note):
     """Aggiunge una visita clinica per un dato paziente."""
     conn = get_connection()
     if not conn:
@@ -156,10 +170,10 @@ def crea_report_visita(paziente_id, data_visita, edss, volume_lesioni, note):
     try:
         cursor = conn.cursor()
         query = """
-            INSERT INTO visite (paziente_id, data_visita, edss, volume_lesioni, note)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO visite (paziente_id, data_visita,farmaco, edss, volume_lesioni, note)
+            VALUES (%s, %s, %s, %s, %s,%s)
         """
-        cursor.execute(query, (paziente_id, data_visita, edss, volume_lesioni, note))
+        cursor.execute(query, (paziente_id, data_visita,farmaco, edss, volume_lesioni, note))
         conn.commit()
         return True
     except Exception as err:
@@ -241,5 +255,25 @@ def pulisci_dati_test(prefisso="TEST-%"):
         conn.rollback()
         print(f"Errore durante la pulizia dei dati di test: {e}")
         return 0
+    finally:
+        conn.close()
+
+def reset_db():
+    """Elimina l'intero database per consentire a init_db() di ricrearlo da zero."""
+    conn = get_connection(db_name=None)  # Connessione senza selezionare il DB
+    if not conn:
+        return False
+
+    try:
+        cursor = conn.cursor()
+        # Elimina l'intero database
+        cursor.execute(f"DROP DATABASE IF EXISTS {DEFAULT_DB}")
+        conn.commit()
+        cursor.close()
+        print(f"[PULIZIA MACRO] Database '{DEFAULT_DB}' eliminato con successo.")
+        return True
+    except Exception as e:
+        print(f"Errore durante la pulizia del database: {e}")
+        return False
     finally:
         conn.close()

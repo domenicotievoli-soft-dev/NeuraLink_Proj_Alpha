@@ -30,7 +30,7 @@ Per valutare la progressione della patologia e l'efficacia delle terapie farmaco
 ### Architettura del Database
 Il database relazionale (`ms_track_db`) adotta una relazione **1 a Molti (1:N)** tra le tabelle `pazienti` e `visite`:
 - **Paziente**: Codice identificativo univoco (`id`), età, anno di diagnosi, linea terapeutica farmacologica.
-- **Visita**: Identificativo visita, data del controllo, punteggio `edss`, carico lesionale volumetrico (`volume_lesioni`), note cliniche e riferimento al paziente (`paziente_id`).
+- **Visita**: Identificativo visita, data del controllo, farmaco prescritto, punteggio `edss`, carico lesionale volumetrico (`volume_lesioni`), note cliniche e riferimento al paziente (`paziente_id`).
 - **Integrità Relazionale**: La chiave esterna `visite(paziente_id)` è configurata con `ON DELETE CASCADE`: la cancellazione di un paziente rimuove automaticamente tutto il suo storico visite associato, evitando dati orfani.
 
 ### Gestione dei Ruoli e Sicurezza
@@ -87,7 +87,6 @@ Creare una copia del file template di esempio ed inserire le credenziali del pro
 cp .env.example .env
 
 Nel file .env impostare:
-Snippet di codice
 
 DB_HOST=127.0.0.1
 DB_PORT=3306

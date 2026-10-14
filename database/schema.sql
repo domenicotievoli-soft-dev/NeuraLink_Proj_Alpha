@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS visite (
     id INT AUTO_INCREMENT PRIMARY KEY,
     paziente_id VARCHAR(20) NOT NULL,
     data_visita DATE NOT NULL,
+    farmaco VARCHAR(100) NOT NULL,
     edss DECIMAL(3, 1) NOT NULL,
     volume_lesioni DECIMAL(5, 2) NOT NULL,
     note TEXT,
@@ -41,14 +42,16 @@ CREATE TABLE IF NOT EXISTS visite (
 
 -- Account Login
 INSERT INTO utenti (username, password_hash, ruolo) VALUES
-('dott.rossi', 'password123', 'medico'),
+('dott.Rossi', 'password123', 'medico'),
+('dott.Acquaro', 'blabla','medico'),
 ('PT-101', 'password123', 'paziente'),
 ('PT-102', 'password123', 'paziente'),
 ('PT-103', 'password123', 'paziente');
 
 -- Profilo Medico (id generato: 1)
 INSERT INTO medici (username, nome) VALUES
-('dott.rossi', 'Dott. Mario Rossi');
+('dott.Rossi', 'Mario Rossi'),
+('dott.Acquaro', 'Leonardo Acquaro');
 
 -- Pazienti associati al Dott. Rossi (medico_id = 1)
 INSERT INTO pazienti (id, medico_id, eta, diagnosi_anno, farmaco) VALUES
@@ -57,7 +60,7 @@ INSERT INTO pazienti (id, medico_id, eta, diagnosi_anno, farmaco) VALUES
 ('PT-103', 1, 29, 2023, 'Natalizumab');
 
 -- Visite cliniche
-INSERT INTO visite (paziente_id, data_visita, edss, volume_lesioni, note) VALUES
-('PT-101', '2025-05-10', 2.0, 12.40, 'Quadro clinico iniziale stabile.'),
-('PT-101', '2026-02-15', 2.5, 13.10, 'Lieve progressione volumetrica.'),
-('PT-102', '2026-01-20', 3.0, 18.00, 'Tolleranza al farmaco regolare.');
+INSERT INTO visite (paziente_id, data_visita, farmaco, edss, volume_lesioni, note) VALUES
+('PT-101', '2025-05-10', 'Interferone', 2.0, 12.40, 'Quadro clinico iniziale stabile.'),
+('PT-101', '2026-02-15', 'Ocrelizumab', 2.5, 13.10, 'Switch terapeutico ad Ocrelizumab per lieve progressione.'),
+('PT-102', '2026-01-20', 'Fingolimod', 3.0, 18.00, 'Tolleranza al farmaco regolare.');

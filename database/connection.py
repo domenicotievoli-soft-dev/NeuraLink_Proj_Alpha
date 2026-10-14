@@ -2,6 +2,7 @@ import os
 import mysql.connector
 from mysql.connector import Error
 from dotenv import load_dotenv
+from werkzeug.security import generate_password_hash
 
 CARTELLA_DB = os.path.dirname(os.path.abspath(__file__))
 CARTELLA_HOME = os.path.dirname(CARTELLA_DB)
@@ -41,61 +42,78 @@ def get_connection(db_name=DEFAULT_DB, host=DEFAULT_HOST, port=DEFAULT_PORT, use
         return None
 
 def check_db_ready():
-    """Controlla velocemente se la tabella principale esiste già."""
-    conn = get_connection(db_name=DEFAULT_DB)
-    if not conn:
+    """Controlla se il DB e la tabella utenti esistono, senza generare eccezioni se il DB è assente."""
+    try:
+        # Tenta la connessione diretta al DB
+        conn = get_connection(db_name=DEFAULT_DB)
+        if not conn:
+            return False
+        
+        cursor = conn.cursor()
+        cursor.execute("SHOW TABLES LIKE 'utenti'")
+        exists = cursor.fetchone() is not None
+        cursor.close()
+        conn.close()
+        return exists
+    except Exception:
+        # Se il database non esiste (errore 1049), restituisce False silenziosamente
         return False
-    cursor = conn.cursor()
-    cursor.execute("SHOW TABLES LIKE 'pazienti'")
-    exists = cursor.fetchone() is not None
-    cursor.close()
-    conn.close()
-    return exists
 
 
 def init_db(schema_file="schema.sql"):
     """
-    Crea il database se non esiste ed esegue lo script SQL di inizializzazione.
+    Crea il database, esegue schema.sql ed effettua l'hashing automatico
+    delle password inserite in testo chiaro.
     """
     if check_db_ready():
         return True
     
     try:
-        #Connessione generica al server MySQL (senza DB)
+        # 1. Connessione al server MySQL per creare il database
         conn = get_connection(db_name=None)
         if not conn:
             print("Impossibile connettersi al server per l'inizializzazione.")
             return False
 
         cursor = conn.cursor()
-        
-        #Crea il DB se assente
         cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DEFAULT_DB}")
         print(f"Database '{DEFAULT_DB}' verificato o creato con successo.")
         cursor.close()
         conn.close()
 
-        #Ora che il DB esiste, ci connettiamo direttamente ad esso
+        # 2. Connessione al DB appena creato ed esecuzione dello schema.sql
         conn = get_connection(db_name=DEFAULT_DB)
-        cursor = conn.cursor()
+        cursor = conn.cursor(dictionary=True) # dictionary=True per accedere ai campi per nome
 
-        #Leggiamo ed eseguiamo le query di schema.sql
         with open(schema_file, "r", encoding="utf-8") as f:
             sql_commands = f.read()
 
-        # Separiamo per ';' ed eseguiamo comando per comando (ignora USE e vuoti)
         statements = sql_commands.split(";")
-        
         for stmt in statements:
             stmt = stmt.strip()
-            # Saltiamo statement vuoti o comandi USE (siamo già collegati al DB)
             if stmt and not stmt.upper().startswith("USE"):
                 cursor.execute(stmt)
 
         conn.commit()
+
+        # 3. CONVERSIONE AUTOMATICA DELLE PASSWORD IN TEXT IN HASH
+        cursor.execute("SELECT username, password_hash FROM utenti")
+        utenti = cursor.fetchall()
+
+        for utente in utenti:
+            pwd_raw = utente['password_hash']
+            # Convertiamo solo se la password non è già un hash di Werkzeug
+            if not pwd_raw.startswith(('pbkdf2:', 'scrypt:', 'argon2:')):
+                hashed_pwd = generate_password_hash(pwd_raw)
+                cursor.execute(
+                    "UPDATE utenti SET password_hash = %s WHERE username = %s",
+                    (hashed_pwd, utente['username'])
+                )
+
+        conn.commit()
         cursor.close()
         conn.close()
-        print("Schema e tabelle configurati con successo!")
+        print("Schema configurato e password cifrate correttamente!")
         return True
 
     except Error as e:

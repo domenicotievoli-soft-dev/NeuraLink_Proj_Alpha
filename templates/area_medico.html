@@ -125,6 +125,15 @@
                                                         <input type="date" class="form-control" name="data_visita" required>
                                                     </div>
                                                     <div class="col-md-6">
+                                                        <label class="form-label fw-semibold">Farmaco Prescritto *</label>
+                                                        <select class="form-select" name="farmaco" required>
+                                                            <option value="Ocrelizumab">Ocrelizumab</option>
+                                                            <option value="Fingolimod">Fingolimod</option>
+                                                            <option value="Natalizumab">Natalizumab</option>
+                                                            <option value="Interferone">Interferone</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-6">
                                                         <label class="form-label fw-semibold">Punteggio EDSS *</label>
                                                         <input type="number" step="0.5" min="0" max="10" class="form-control" name="edss" placeholder="Es. 2.5" required>
                                                     </div>

@@ -37,7 +37,12 @@
             <div class="card-body">
                 <i class="bi bi-prescription2 text-success fs-1 mb-2"></i>
                 <h6 class="text-muted text-uppercase small fw-bold">Terapia Assegnata</h6>
-                <h4 class="fw-bold text-success mb-0">{{ paziente.farmaco }}</h4>
+                {% if visite %}
+                    <!-- Prende il farmaco dell'ultima visita nell'elenco -->
+                    <h4 class="fw-bold text-success mb-0">{{ visite[-1].farmaco }}</h3>
+                {% else %}
+                    <h5 class="text-muted mb-0">Nessuna terapia registrata</h5>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -56,6 +61,7 @@
                         <th scope="col" class="ps-4">Data Visita</th>
                         <th scope="col">Punteggio EDSS</th>
                         <th scope="col">Volume Lesioni (mm³)</th>
+                        <th scope="col">Farmaco Assegnato</th>
                         <th scope="col" class="pe-4">Note del Medico</th>
                     </tr>
                 </thead>
@@ -74,6 +80,7 @@
                             {% endif %}
                         </td>
                         <td>{{ visita.volume_lesioni }} mm³</td>
+                        <td><span class="badge bg-info text-dark">{{ visita.farmaco }}</span></td>
                         <td class="pe-4 text-muted small">{{ visita.note or 'Nessuna nota registrata' }}</td>
                     </tr>
                     {% else %}

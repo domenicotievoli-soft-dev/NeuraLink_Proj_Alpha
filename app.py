@@ -166,6 +166,7 @@ def nuova_visita(paziente_id):
     #Se viene inviato il form di una nuova visita clinica
     if request.method == 'POST':
         data_visita = request.form.get('data_visita')
+        farmaco = request.form.get('farmaco')
         edss = request.form.get('edss')
         volume_lesioni = request.form.get('volume_lesioni')
         note = request.form.get('note', '').strip()
@@ -176,6 +177,7 @@ def nuova_visita(paziente_id):
                 salvato = crea_report_visita(
                     paziente_id=paziente_id,
                     data_visita=data_visita,
+                    farmaco=farmaco,
                     edss=float(edss),
                     volume_lesioni=float(volume_lesioni),
                     note=note
