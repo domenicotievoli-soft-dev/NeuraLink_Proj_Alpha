@@ -1,13 +1,14 @@
-
 {% extends 'base.html' %}
 
 {% block title %}Dettaglio Paziente {{ paziente.id }} - NeuraLink{% endblock %}
 
 {% block content %}
 <div class="mb-4">
+    {% if session.get('ruolo') == 'medico' %}
     <a href="{{ url_for('dashboard_medico') }}" class="btn btn-outline-secondary btn-sm mb-3">
         <i class="bi bi-arrow-left me-1"></i>Torna alla Dashboard
     </a>
+    {% endif %}
     <div class="d-flex justify-content-between align-items-center">
         <h2 class="fw-bold mb-0">Scheda Clinica: <span class="text-primary font-monospace">{{ paziente.id }}</span></h2>
         <span class="badge bg-primary fs-6">Paziente Attivo</span>
@@ -18,7 +19,7 @@
 <div class="row g-4 mb-4">
     <div class="col-md-6">
         <div class="card shadow-sm border-0 h-100">
-            <div class="card-header bg-white fw-bold">
+            <div class="card-header bg-body fw-bold">
                 <i class="bi bi-person-vcard me-2 text-primary"></i>Informazioni Anagrafiche
             </div>
             <div class="card-body">
@@ -42,16 +43,14 @@
 
     <div class="col-md-6">
         <div class="card shadow-sm border-0 h-100">
-            <div class="card-header bg-white fw-bold">
+            <div class="card-header bg-body fw-bold">
                 <i class="bi bi-capsule me-2 text-success"></i>Terapia Farmacologica Attuale
             </div>
             <div class="card-body d-flex flex-column justify-content-center">
                 <p class="text-muted small mb-1">Farmaco attualmente in prescrizione:</p>
                 {% if visite %}
-                    <!-- Prende il farmaco dell'ultima visita nell'elenco -->
                     <h3 class="fw-bold text-success mb-0">{{ visite[-1].farmaco }}</h3>
                 {% elif paziente.farmaco %}
-                    <!-- Se non ci sono visite, ma il paziente ha un farmaco assegnato in anagrafica -->
                     <h3 class="fw-bold text-success mb-0">{{ paziente.farmaco }}</h3>
                 {% else %}
                     <h5 class="text-muted mb-0">Nessuna terapia registrata</h5>
@@ -61,15 +60,57 @@
     </div>
 </div>
 
+<!-- GRAFICI CLINICI LONGITUDINALI (Visibili SOLO al Medico) -->
+{% if session.get('ruolo') == 'medico' %}
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-body d-flex justify-content-between align-items-center">
+        <span class="fw-bold">
+            <i class="bi bi-activity me-2 text-primary"></i>Monitoraggio Clinico & Radiologico
+        </span>
+        <span class="text-muted small">Passa il cursore sui punti per visualizzare la terapia associata</span>
+    </div>
+    <div class="card-body">
+        {% if visite|length >= 1 %}
+            <div class="row g-4">
+                <!-- Grafico EDSS -->
+                <div class="col-md-6 border-end">
+                    <h6 class="fw-semibold text-danger mb-3">
+                        <i class="bi bi-graph-up me-1"></i> Disabilità Clinica (EDSS)
+                    </h6>
+                    <div style="position: relative; height: 260px; width: 100%;">
+                        <canvas id="chartEDSS"></canvas>
+                    </div>
+                </div>
+
+                <!-- Grafico Volume Lesioni -->
+                <div class="col-md-6">
+                    <h6 class="fw-semibold text-primary mb-3">
+                        <i class="bi bi-bar-chart me-1"></i> Carico Lesionale MRI (mm³)
+                    </h6>
+                    <div style="position: relative; height: 260px; width: 100%;">
+                        <canvas id="chartVolume"></canvas>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <div class="text-center py-4 text-muted">
+                <i class="bi bi-bar-chart-line fs-3 d-block mb-2"></i>
+                Registra almeno una visita clinica per visualizzare i grafici dell'andamento.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
 <!-- Storico Visite Cliniche -->
 <div class="card shadow-sm border-0">
-    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+    <div class="card-header bg-body d-flex justify-content-between align-items-center">
         <span class="fw-bold"><i class="bi bi-list-task me-2 text-primary"></i>Storico Controlli e Lesioni</span>
         <span class="badge bg-secondary">{{ visite|length }} visite registrate</span>
     </div>
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
-            <thead class="table-light">
+            <thead>
                 <tr>
                     <th scope="col" class="ps-4">Data Visita</th>
                     <th scope="col">Farmaco prescritto</th>
@@ -85,14 +126,14 @@
                 {% for visita in visite %}
                 <tr>
                     <td class="ps-4 fw-bold">{{ visita.data_visita }}</td>
-                    <td><span class="badge bg-info text-dark">{{ visita.farmaco }}</span></td>
+                    <td><span class="badge bg-info text-body">{{ visita.farmaco }}</span></td>
                     <td>
                         {% if visita.edss < 4.0 %}
-                            <span class="badge bg-warning text-dark">EDSS {{ visita.edss }}</span>
+                            <span class="badge bg-success text-body">EDSS {{ visita.edss }}</span>
                         {% elif visita.edss < 7.0 %}
-                            <span class="badge text-black" style="background-color: #fd7e14;">EDSS {{ visita.edss }}</span>
+                            <span class="badge text-body" style="background-color: #fd7e14;">EDSS {{ visita.edss }}</span>
                         {% else %}
-                            <span class="badge bg-danger text-black">EDSS {{ visita.edss }}</span>
+                            <span class="badge bg-danger text-body">EDSS {{ visita.edss }}</span>
                         {% endif %}
                     </td>
                     <td>{{ visita.volume_lesioni }} mm³</td>
@@ -115,7 +156,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="{% if session.get('ruolo') == 'medico' %}5{% else %}4{% endif %}" class="text-center py-4 text-muted">
+                    <td colspan="{% if session.get('ruolo') == 'medico' %}6{% else %}5{% endif %}" class="text-center py-4 text-muted">
                         Nessuna visita registrata per questo paziente.
                     </td>
                 </tr>
@@ -128,7 +169,6 @@
 <!-- VISIBILE SOLO SE L'UTENTE È UN MEDICO -->
 {% if session.get('ruolo') == 'medico' %}
 <div class="card shadow-sm border-0 mt-5 mb-5" id="form-visita">
-    <!-- Header che funziona da pulsante toggle -->
     <div class="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center" 
          style="cursor: pointer;" 
          data-bs-toggle="collapse" 
@@ -139,17 +179,14 @@
         <i class="bi bi-chevron-down ms-auto"></i>
     </div>
 
-    <!-- Contenuto del form nascosto di default-->
     <div class="collapse" id="collapseVisita">
         <div class="card-body p-4">
             <form action="{{ url_for('nuova_visita', paziente_id=paziente.id) }}" method="POST">
                 <div class="row g-3">
-                    <!-- Data Visita -->
                     <div class="col-md-4">
                         <label for="data_visita" class="form-label fw-semibold">Data Visita *</label>
                         <input type="date" class="form-control" id="data_visita" name="data_visita" required>
                     </div>
-                    <!-- Farmaco prescritto -->
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Farmaco Prescritto *</label>
                         <select class="form-select" name="farmaco" required>
@@ -159,26 +196,19 @@
                             <option value="Interferone">Interferone</option>
                         </select>
                     </div>
-                    <!-- Punteggio EDSS -->
                     <div class="col-md-4">
                         <label for="edss" class="form-label fw-semibold">Punteggio EDSS (0.0 - 10.0) *</label>
                         <input type="number" step="0.5" min="0" max="10" class="form-control" id="edss" name="edss" placeholder="Es. 2.5" required>
                     </div>
-
-                    <!-- Volume Lesioni -->
                     <div class="col-md-4">
                         <label for="volume_lesioni" class="form-label fw-semibold">Volume Lesioni (mm³) *</label>
                         <input type="number" step="0.1" min="0" class="form-control" id="volume_lesioni" name="volume_lesioni" placeholder="Es. 1250.5" required>
                     </div>
-
-                    <!-- Note Cliniche -->
                     <div class="col-12">
                         <label for="note" class="form-label fw-semibold">Note Cliniche</label>
                         <textarea class="form-control" id="note" name="note" rows="3" placeholder="Note cliniche facoltative..."></textarea>
                     </div>
                 </div>
-
-                <!-- Pulsante Salva -->
                 <div class="mt-4 text-end">
                     <button type="submit" class="btn btn-primary px-4">
                         <i class="bi bi-check-lg me-1"></i>Salva Visita
@@ -188,5 +218,116 @@
         </div>
     </div>
 </div>
+{% endif %}
+
+{% if session.get('ruolo') == 'medico' and visite|length >= 1 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // 1. Parsing dati da Jinja2
+    const visiteList = JSON.parse('{{ visite | tojson }}');
+
+    // 2. Pulizia data: rimuove orario e fuso orario, produce es. "16/10/2025"
+    const labels = visiteList.map(v => {
+        const d = new Date(v.data_visita);
+        return d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    });
+
+    const edssData = visiteList.map(v => v.edss);
+    const volumeData = visiteList.map(v => v.volume_lesioni);
+    const farmaciData = visiteList.map(v => v.farmaco);
+
+    // 3. Callback comune per mostrare la terapia nel tooltip
+    const tooltipFarmacoCallback = {
+        afterBody: function(context) {
+            const index = context[0].dataIndex;
+            return '💊 Terapia: ' + farmaciData[index];
+        }
+    };
+
+    // --- GRAFICO 1: EDSS (Sinistra) ---
+    const ctxEDSS = document.getElementById('chartEDSS').getContext('2d');
+    new Chart(ctxEDSS, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Punteggio EDSS',
+                data: edssData,
+                borderColor: '#dc3545',
+                backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                borderWidth: 2.5,
+                pointBackgroundColor: '#dc3545',
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                tension: 0.1,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: { callbacks: tooltipFarmacoCallback },
+                legend: { display: false } // Il titolo sopra la colonna rende superflua la legenda
+            },
+            scales: {
+                y: {
+                    min: 0,
+                    max: 10,
+                    ticks: { stepSize: 1 },
+                    title: {
+                        display: true,
+                        text: 'Scala EDSS (0 - 10)',
+                        font: { weight: 'bold' }
+                    }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+
+    // --- GRAFICO 2: Volume Lesioni (Destra) ---
+    const ctxVolume = document.getElementById('chartVolume').getContext('2d');
+    new Chart(ctxVolume, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Volume (mm³)',
+                data: volumeData,
+                backgroundColor: 'rgba(13, 110, 253, 0.6)',
+                borderColor: '#0d6efd',
+                borderWidth: 1,
+                borderRadius: 4,
+                maxBarThickness: 45
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: { callbacks: tooltipFarmacoCallback },
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Volume Lesioni (mm³)',
+                        font: { weight: 'bold' }
+                    }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+});
+</script>
 {% endif %}
 {% endblock %}

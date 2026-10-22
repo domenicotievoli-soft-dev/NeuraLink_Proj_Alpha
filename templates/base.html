@@ -4,63 +4,123 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}NeuraLink - Gestione Cartelle Cliniche{% endblock %}</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons CDN -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-</head>
-<body class="bg-light">
 
-    <!--Navbar principale-->
+    <!-- Script immediato-->
+    <script>
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-bs-theme', savedTheme);
+        })();
+    </script>
+
+    <!-- Bootstrap 5.3+ e Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+</head>
+<body class="bg-body text-body d-flex flex-column min-vh-100">
+
+    <!-- Navbar principale -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="{{url_for('index')}}">
+        <div class="container d-flex justify-content-between align-items-center">
+            
+            <!-- Logo a sinistra -->
+            <a class="navbar-brand fw-bold d-flex align-items-center" href="{{ url_for('index') }}">
                 <i class="bi bi-activity me-2"></i>NeuraLink
             </a>
-            {% if session.get('username') %}
-            <div class="d-flex align-items-center text-white">
-                <span class="me-3">
-                    <i class="bi bi-person-circle me-1"></i>
-                    <strong>{{session.get('username')}}</strong>
-                    <span class="badge bg-light text-primary ms-1">{{session.get('ruolo') | upper}}</span>
-                </span>
-                <a href="{{url_for('logout')}}" class="btn btn-outline-light btn-sm">
-                    <i class="bi bi-box-arrow-right me-1"></i>Logout
-                </a>
+
+            <!-- Controlli a destra: Toggle Dark Mode + Profilo Utente -->
+            <div class="d-flex align-items-center gap-3">
+                <!-- Tasto Toggle Dark Mode -->
+                <button class="btn btn-outline-light btn-sm d-flex align-items-center" 
+                        id="btnThemeToggle" 
+                        type="button" 
+                        title="Cambia tema">
+                    <i class="bi bi-moon-stars" id="themeIcon"></i>
+                </button>
+
+                {% if session.get('username') %}
+                <div class="d-flex align-items-center text-white">
+                    <span class="me-3">
+                        <i class="bi bi-person-circle me-1"></i>
+                        <strong>{{ session.get('username') }}</strong>
+                        <span class="badge bg-light text-primary ms-1">{{ session.get('ruolo') | upper }}</span>
+                    </span>
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">
+                        <i class="bi bi-box-arrow-right me-1"></i>Logout
+                    </a>
+                </div>
+                {% endif %}
             </div>
-            {% endif %}
+
         </div>
     </nav>    
 
     <!-- Contenitore centrale con gestione automatica dei messaggi flash -->
-     <main class="container mb-5">
+    <main class="container mb-5 flex-grow-1">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{category}} alert-dismissible fade show shadow-sm" role="alert">
+                    <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
                         <i class="bi
                             {% if category == 'success' %}bi-check-circle-fill
                             {% elif category == 'danger' %}bi-exclamation-triangle-fill
                             {% elif category == 'warning' %}bi-exclamation-circle-fill
-                            {% else %} bi-info-circle-fill{% endif %} me-2
-                        "></i>
-                        {{message}}
+                            {% else %} bi-info-circle-fill{% endif %} me-2"></i>
+                        {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 {% endfor %}
             {% endif %}
         {% endwith %}
         
-        <!-- Blocco dinamico riempito dai singoli file figli -->
+        <!-- Blocco dinamico riempito dai singoli template figli -->
         {% block content %}{% endblock %}
-     </main>
+    </main>
 
-     <!-- Footer -->
-    <footer class="footer mt-auto py-3 bg-white border-top text-center text-muted">
+    <!-- Footer -->
+    <footer class="footer mt-auto py-3 bg-body-tertiary border-top text-center text-muted">
         <div class="container">
-            <small> 2026 NeuraLink - Sistema Gestione Sclerosi Multipla</small>
+            <small>&copy; 2026 NeuraLink - Sistema Gestione Sclerosi Multipla</small>
         </div>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Script Gestione Dark Mode -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const toggleBtn = document.getElementById('btnThemeToggle');
+            const icon = document.getElementById('themeIcon');
+            const htmlTag = document.documentElement;
+
+            function syncIcon(theme) {
+                if (!icon) return;
+                if (theme === 'dark') {
+                    icon.className = 'bi bi-sun-fill';
+                } else {
+                    icon.className = 'bi bi-moon-stars';
+                }
+            }
+
+            // Imposta l'icona iniziale corretta
+            syncIcon(htmlTag.getAttribute('data-bs-theme'));
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const currentTheme = htmlTag.getAttribute('data-bs-theme') || 'light';
+                    const nextTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+                    htmlTag.setAttribute('data-bs-theme', nextTheme);
+                    localStorage.setItem('theme', nextTheme);
+                    syncIcon(nextTheme);
+
+                    // Emette l'evento custom per aggiornare al volo Chart.js
+                    window.dispatchEvent(new CustomEvent('themeChanged', { detail: { theme: nextTheme } }));
+                });
+            }
+        });
+    </script>
 </body>
 </html>

@@ -19,7 +19,7 @@
         <form action="{{ url_for('dashboard_medico') }}" method="GET" class="row g-2">
             <div class="col-md-10">
                 <div class="input-group">
-                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <span class="input-group-text bg-body border-end-0"><i class="bi bi-search text-muted"></i></span>
                     <input type="text" name="q" class="form-control border-start-0" 
                            placeholder="Cerca per Codice Paziente (es. PT-101) o Farmaco..." 
                            value="{{ request.args.get('q', '') }}">
@@ -37,16 +37,40 @@
     </div>
 </div>
 
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    
+    <!-- Form Filtro Ordinamento -->
+    <form method="GET" action="{{ url_for('dashboard_medico') }}" class="d-flex align-items-center gap-2">
+        <!-- Mantieni la ricerca testuale se il medico ha cercato qualcosa -->
+        {% if query %}
+            <input type="hidden" name="q" value="{{ query }}">
+        {% endif %}
+
+        <i class="bi bi-funnel text-secondary"></i>
+        <label for="sort" class="fw-bold text-secondary small text-nowrap mb-0">Ordina per:</label>
+        
+        <select name="sort" id="sort" class="form-select form-select-sm shadow-sm" style="width: auto;" onchange="this.form.submit()">
+            <option value="edss_desc" {% if sort_current == 'edss_desc' %}selected{% endif %}>⚠️ Priorità EDSS (Decrescente)</option>
+            <option value="edss_asc" {% if sort_current == 'edss_asc' %}selected{% endif %}>🟢 EDSS (Crescente)</option>
+            <option value="eta_desc" {% if sort_current == 'eta_desc' %}selected{% endif %}>Età (Più anziani)</option>
+            <option value="eta_asc" {% if sort_current == 'eta_asc' %}selected{% endif %}>Età (Più giovani)</option>
+            <option value="id_asc" {% if sort_current == 'id_asc' %}selected{% endif %}>Codice Paziente (A-Z)</option>
+            <option value="id_desc" {% if sort_current == 'id_desc' %}selected{% endif %}>Codice Paziente (Z-A)</option>
+        </select>
+    </form>
+
+</div>
 <!-- Tabella Pazienti -->
 <div class="card shadow-sm border-0">
     <div class="card-body p-0">
-        <div class="table-responsive">
+        <div class="table-responsive" style="overflow: visible; min-height: 260px;">
             <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+                <thead>
                     <tr>
                         <th scope="col" class="ps-4">Codice Paziente</th>
                         <th scope="col">Età</th>
                         <th scope="col">Anno Diagnosi</th>
+                        <th scope="col">EDSS Attuale</th>
                         <th scope="col">Farmaco Assegnato</th>
                         <th scope="col" class="text-center pe-4">Azioni</th>
                     </tr>
@@ -54,7 +78,7 @@
                 <tbody>
                     {% for paziente in pazienti %}
                     <tr>
-                        <!-- 1. Dati Anagrafici (nelle giuste colonne) -->
+                        <!-- 1. Dati Anagrafici -->
                         <td class="ps-4 fw-bold">
                             <a href="{{ url_for('dettaglio_paziente_medico', paziente_id=paziente.id) }}" class="text-decoration-none">
                                 {{ paziente.id }}
@@ -62,6 +86,21 @@
                         </td>
                         <td>{{ paziente.eta }} anni</td>
                         <td>{{ paziente.diagnosi_anno }}</td>
+                        <td>
+                            {% if paziente.edss is not none and paziente.edss != '' %}
+                                {% set edss_val = paziente.edss | float %}
+                                
+                                {% if edss_val < 4.0 %}
+                                    <span class="badge bg-success text-white">EDSS {{ edss_val }}</span>
+                                {% elif edss_val < 7.0 %}
+                                    <span class="badge text-white" style="background-color: #fd7e14;">EDSS {{ edss_val }}</span>
+                                {% else %}
+                                    <span class="badge bg-danger text-white">EDSS {{ edss_val }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted small">N.D.</span>
+                            {% endif %}
+                        </td>
                         <td>
                             <span class="badge bg-info text-dark">{{ paziente.farmaco }}</span>
                         </td>
@@ -170,6 +209,52 @@
                     {% endfor %}
                 </tbody>
             </table>
+            <!-- Footer con Informazioni e Paginazione Stile Google -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center mt-3 px-2 gap-2">
+                
+                <!-- Contatore dinamico es. "Mostrando 1 - 20 di 42 pazienti" -->
+                <div class="text-muted small">
+                    Mostrando <strong>{{ start_item }}</strong> - <strong>{{ end_item }}</strong> di <strong>{{ totale_pazienti }}</strong> pazienti
+                </div>
+
+                <!-- Paginazione Numerata -->
+                {% if total_pages > 1 %}
+                <nav aria-label="Paginazione pazienti">
+                    <ul class="pagination pagination-sm mb-0">
+                        
+                        <!-- Tasto Precedente -->
+                        <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                            <a class="page-link" 
+                            href="{{ url_for('dashboard_medico', page=page-1, q=query, sort=sort_current) }}" 
+                            aria-label="Precedente">
+                                &laquo; Prec
+                            </a>
+                        </li>
+
+                        <!-- Numeri di Pagina (1, 2, 3...) -->
+                        {% for p in range(1, total_pages + 1) %}
+                        <li class="page-item {% if p == page %}active{% endif %}">
+                            <a class="page-link" 
+                            href="{{ url_for('dashboard_medico', page=p, q=query, sort=sort_current) }}">
+                                {{ p }}
+                            </a>
+                        </li>
+                        {% endfor %}
+
+                        <!-- Tasto Successivo -->
+                        <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                            <a class="page-link" 
+                            href="{{ url_for('dashboard_medico', page=page+1, q=query, sort=sort_current) }}" 
+                            aria-label="Successivo">
+                                Succ &raquo;
+                            </a>
+                        </li>
+
+                    </ul>
+                </nav>
+                {% endif %}
+
+            </div>
         </div>
     </div>
 </div>

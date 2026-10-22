@@ -57,29 +57,93 @@ def verifica_utente(username, password_in_chiaro):
 # ==============================================================================
 # READ (LETTURA)
 # ==============================================================================
-def get_pazienti_by_medico(medico_id, search_query=None):
-    """Restituisce tutti i pazienti associati a un determinato medico."""
+def get_pazienti_by_medico(medico_id, search_query=None, sort_by='edss_desc', limit=20, offset=0):
+    """
+    Restituisce i pazienti di un medico applicando filtri, ordinamento e paginazione in SQL.
+    Ritorna una tupla: (lista_pazienti_pagina, totale_pazienti_trovati)
+    """
     conn = get_connection()
     if not conn:
-        return []
+        return [], 0
 
     try:
         cursor = conn.cursor(dictionary=True)
+
+        # 1. Whitelist sicura degli ordinamenti SQL 
+        sort_options = {
+            'edss_desc': 'edss DESC, p.id ASC',
+            'edss_asc': 'edss ASC, p.id ASC',
+            'eta_desc': 'p.eta DESC',
+            'eta_asc': 'p.eta ASC',
+            'id_asc': 'p.id ASC',
+            'id_desc': 'p.id DESC'
+        }
+        order_clause = sort_options.get(sort_by, 'edss DESC, p.id ASC')
+
+        # 2. Costruzione dinamica della clausola WHERE per la ricerca
+        where_clause = "WHERE p.medico_id = %s"
+        params = [medico_id]
+
         if search_query:
-            query = """
-                SELECT * FROM pazienti 
-                WHERE medico_id = %s AND (id LIKE %s OR farmaco LIKE %s)
-                ORDER BY id ASC
-            """
+            where_clause += """ 
+            AND (
+                p.id LIKE %s 
+                OR COALESCE(
+                    (SELECT v.farmaco FROM visite v 
+                     WHERE v.paziente_id = p.id 
+                     ORDER BY v.data_visita DESC, v.id DESC LIMIT 1),
+                    p.farmaco
+                ) LIKE %s
+            )
+        """
             filtro = f"%{search_query}%"
-            cursor.execute(query, (medico_id, filtro, filtro))
-        else:
-            query = "SELECT * FROM pazienti WHERE medico_id = %s ORDER BY id ASC"
-            cursor.execute(query, (medico_id,))
-        return cursor.fetchall()
+            params.extend([filtro, filtro])
+
+        # 3. CONTEGGIO TOTALE (Servirà per la barra delle pagine stile Google)
+        count_query = f"SELECT COUNT(*) AS totale FROM pazienti p {where_clause}"
+        cursor.execute(count_query, params)
+        totale_pazienti = cursor.fetchone()['totale']
+
+        # 4. QUERY PRINCIPALE (Con Sottoquery per Ultimo EDSS/Farmaco + ORDER BY + LIMIT/OFFSET)
+        query = f"""
+            SELECT 
+                p.id, 
+                p.eta, 
+                p.diagnosi_anno,
+                p.medico_id,
+                COALESCE(
+                    (SELECT v.farmaco 
+                     FROM visite v 
+                     WHERE v.paziente_id = p.id 
+                     ORDER BY v.data_visita DESC, v.id DESC LIMIT 1),
+                    p.farmaco
+                ) AS farmaco,
+                (
+                    SELECT CAST(v.edss AS DECIMAL(3,1)) 
+                    FROM visite v 
+                    WHERE v.paziente_id = p.id 
+                    ORDER BY v.data_visita DESC, v.id DESC LIMIT 1
+                ) AS edss
+            FROM pazienti p
+            {where_clause}
+            ORDER BY {order_clause}
+            LIMIT %s OFFSET %s
+        """
+
+        params_paginati = params + [limit, offset]
+        cursor.execute(query, params_paginati)
+        pazienti = cursor.fetchall()
+
+        # Conversione float sicura per Jinja2
+        for p in pazienti:
+            if p.get('edss') is not None:
+                p['edss'] = float(p['edss'])
+
+        return pazienti, totale_pazienti
+
     except Exception as err:
         print(f"Errore get_pazienti_by_medico: {err}")
-        return []
+        return [], 0
     finally:
         cursor.close()
         conn.close()

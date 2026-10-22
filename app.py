@@ -1,6 +1,7 @@
 import os
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 from dotenv import load_dotenv
+import math
 
 # Import delle funzioni CRUD dal modulo database
 from database.db import (
@@ -52,16 +53,18 @@ def login():
         utente = verifica_utente(username, password)
 
         if utente:
-            # Salvataggio dati minimi necessari nella sessione crittografata
+            # Salvataggio sicuro nella sessione
             session['username'] = utente['username']
             session['ruolo'] = utente['ruolo']
-            session['medico_id'] = utente['medico_id']
+            
+            # Se è medico salva medico_id, altrimenti se è paziente salva paziente_id (o ID utente)
+            session['medico_id'] = utente.get('medico_id')
+            session['paziente_id'] = utente.get('paziente_id')  # o utente['username'] se l'ID è PT-101
 
             flash(f"Accesso effettuato. Benvenuto/a {utente['username']}")
             return redirect(url_for('index'))
         else:
             flash("Credenziali non corrette o utente non trovato", "warning")
-    
     return render_template('login.html')
 
 @app.route('/logout')
@@ -84,6 +87,18 @@ def index():
         session.clear() 
         return redirect(url_for('login'))
 
+@app.after_request
+def add_header(response):
+    """
+    Impedisce al browser di salvare le pagine in cache (bfcache).
+    Se l'utente fa Logout e preme 'Indietro', il browser è costretto
+    a richiedere la pagina al server, che lo reindirizzerà al Login.
+    """
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
+
 # AREA MEDICO
 @app.route('/medico/dashboard')
 def dashboard_medico():
@@ -97,11 +112,70 @@ def dashboard_medico():
 
     query_ricerca = request.args.get('q', '').strip()
     medico_id = session.get('medico_id')
+    ordina_per = request.args.get('sort', 'edss_desc')
+    
+    # Gestione Numero Pagina
+    try:
+        page = int(request.args.get('page', 1))
+        if page < 1: page = 1
+    except ValueError:
+        page = 1
+
+    per_page = 20
+    offset = (page - 1) * per_page
+
 
     # Recupera i pazienti (con eventuale filtro di ricerca per ID o farmaco)
-    pazienti = get_pazienti_by_medico(medico_id, search_query=query_ricerca or None)
+    pazienti, totale_pazienti = get_pazienti_by_medico(
+        medico_id=medico_id,
+        search_query=query_ricerca or None,
+        sort_by=ordina_per,
+        limit=per_page,
+        offset=offset
+    )
 
-    return render_template('area_medico.html', pazienti=pazienti, query=query_ricerca)
+    total_pages = math.ceil(totale_pazienti / per_page) if totale_pazienti > 0 else 1
+    start_item = offset + 1 if totale_pazienti > 0 else 0
+    end_item = min(offset + per_page, totale_pazienti)
+
+    # Se la lista è vuota, passa valori di default ed evita calcoli Pandas
+    if not pazienti:
+        return render_template(
+            'area_medico.html', 
+            pazienti=[], 
+            totale_pazienti=0,
+            dates=[], 
+            edss_scores=[], 
+            volume_lesioni=[]
+        )
+    
+    
+    # Sovrascrive dinamicamente farmaco ed EDSS di ciascun paziente
+    for paziente in pazienti:
+        _, visite = get_paziente_by_id(paziente['id'])
+        if visite and len(visite) > 0:
+            paziente['farmaco'] = visite[-1]['farmaco']
+            
+            # Conversione sicura dell'EDSS in float
+            valore_edss = visite[-1].get('edss')
+            try:
+                paziente['edss'] = float(valore_edss) if valore_edss is not None else None
+            except (ValueError, TypeError):
+                paziente['edss'] = None
+        else:
+            paziente['edss'] = None
+    
+    return render_template(
+        'area_medico.html',
+        pazienti=pazienti,
+        totale_pazienti=totale_pazienti,
+        page=page,
+        total_pages=total_pages,
+        start_item=start_item,
+        end_item=end_item,
+        query=query_ricerca,
+        sort_current=ordina_per
+    )
 
 @app.route('/medico/paziente/nuovo', methods=['GET', 'POST'])
 def nuovo_paziente():

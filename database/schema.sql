@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS visite (
     volume_lesioni DECIMAL(5, 2) NOT NULL,
     note TEXT,
     FOREIGN KEY (paziente_id) REFERENCES pazienti(id) ON DELETE CASCADE
+
+    INDEX idx_visite_paziente_data (paziente_id, data_visita DESC, id DESC)
 );
 
 -- Account Login
